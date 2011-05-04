@@ -1,112 +1,153 @@
-var sys = require('sys');
-var extend = require('../djangode/utils/base').extend;
-extend(GLOBAL, require('../djangode/utils/test').dsl);
-extend(GLOBAL, require('../djangode/template/template'));
+var extend = require('../../lib/utils/base').extend;
+extend(GLOBAL, require('../../lib/template/template'));
 
-testcase('Test tokenizer');
-    test('sanity test', function () {
+var LOG = console ? console.log : require('util').debug;
+
+describe('Test tokenizer', function () {
+
+    it('should pass sanity test', function () {
         var tokens = tokenize('Hest');
-        assertEquals([{'type': 'text', 'contents': 'Hest'}], tokens);
+        expect(tokens).toEqual([ new Token('text', 'Hest')]);
     });
-    test('no empty tokens between tags', function () {
+    it('should not output empty tokens between tags', function () {
         var tokens = tokenize('{{tag}}');
-        assertEquals( [{type:'variable', contents: 'tag'}], tokens );
+        expect(tokens ).toEqual([ new Token('variable', 'tag')]);
     });
-    test('split token contents', function () {
-        assertEquals(
-            ['virker', 'det', 'her'],
+    it('should split token contents', function () {
+        expect(
             tokenize('  virker det her  ')[0].split_contents()
+        ).toEqual(
+            ['virker', 'det', 'her']
         );
-        assertEquals(
-            ['her', 'er', '"noget der er i qoutes"', 'og', 'noget', 'der', 'ikke', 'er'],
+        expect(
             tokenize('her er "noget der er i qoutes" og noget der ikke er')[0].split_contents()
+        ).toEqual(
+            ['her', 'er', '"noget der er i qoutes"', 'og', 'noget', 'der', 'ikke', 'er']
         );
 
-        assertEquals( ['date:"F j, Y"'], tokenize('date:"F j, Y"')[0].split_contents());
-        assertEquals( ['date:', '"F j, Y"'], tokenize('date: "F j, Y"')[0].split_contents());
+        expect( tokenize('date:"F j, Y"')[0].split_contents()).toEqual( ['date:"F j, Y"']);
+        expect( tokenize('date: "F j, Y"')[0].split_contents()).toEqual( ['date:', '"F j, Y"']);
+    });
+});
+
+describe('Filter Expression tests', function () {
+
+    beforeEach(function () {
+
+        function check(obj, actual, safe) {
+
+            if (safe++ > 10) { throw 'no match'; }
+
+            if (obj.length && obj.forEach) {
+                obj.forEach(function (x, idx) { check(x, actual[idx], safe); });
+            } else if (typeof(obj) === 'string' || typeof(obj) === 'number') {
+                if (obj !== actual) { throw 'no match'; }
+            } else {
+                for (var x in obj) { if (obj.hasOwnProperty(x)) { check(obj[x], actual[x], safe); } }
+            }
+
+            safe--;
+        }
+
+        this.addMatchers({
+            toHaveProperties: function (expected) {
+                try { check(expected, this.actual, 0); return true; } catch (x) { return false; }
+            }
+        });
     });
 
-testcase('Filter Expression tests');
-    test('should parse valid syntax', function () {
-        assertEquals( 
-            { variable: 'item', filter_list: [ { name: 'add' } ] },
+    it('should parse valid syntax', function () {
+        expect( 
             new FilterExpression("item|add")
+        ).toHaveProperties(
+            { variable: 'item', filter_list: [ { name: 'add' } ] }
         );
-        assertEquals(
-            { variable: 'item.subitem', filter_list: [ { name: 'add' }, { name: 'sub' } ] },
+        expect(
             new FilterExpression("item.subitem|add|sub")
+        ).toHaveProperties(
+            { variable: 'item.subitem', filter_list: [ { name: 'add' }, { name: 'sub' } ] }
         );
-        assertEquals(
-            { variable: 'item', filter_list: [ { name: 'add', var_arg: 5 }, { name: 'sub', arg: "2" } ] },
+        expect(
             new FilterExpression('item|add:5|sub:"2"')
+        ).toHaveProperties(
+            { variable: 'item', filter_list: [ { name: 'add', var_arg: 5 }, { name: 'sub', arg: "2" } ] }
         );
-        assertEquals(
-            { variable: 'item', filter_list: [ { name: 'concat', arg: 'heste er naijs' } ] },
+        expect(
             new FilterExpression('item|concat:"heste er naijs"')
+        ).toHaveProperties(
+            { variable: 'item', filter_list: [ { name: 'concat', arg: 'heste er naijs' } ] }
         );
-        assertEquals(
-            { variable: 'person_name', filter_list: [ ] },
+        expect(
             new FilterExpression('person_name')
+        ).toHaveProperties(
+            { variable: 'person_name', filter_list: [ ] }
         );
-        assertEquals(
-            { variable: 335, filter_list: [{name: 'test'}] },
+        expect(
             new FilterExpression('335|test')
+        ).toHaveProperties(
+            { variable: 335, filter_list: [{name: 'test'}] }
         );
-        assertEquals(
-            { constant: "hest", filter_list: [{name: 'test'}] },
+        expect(
             new FilterExpression('"hest"|test')
+        ).toHaveProperties(
+            { constant: "hest", filter_list: [{name: 'test'}] }
         );
-        assertEquals(
-            { variable: "item", filter_list: [{name: 'add', var_arg: 'other' }] },
+        expect(
             new FilterExpression('item|add:other')
+        ).toHaveProperties(
+            { variable: "item", filter_list: [{name: 'add', var_arg: 'other' }] }
         );
     });
 
-    test('should fail on invalid syntax', function () {
-        function attempt(s) { return new FilterExpression(s); }
+    it('should fail on invalid syntax', function () {
 
-        shouldThrow(attempt, 'item |add:2');
-        shouldThrow(attempt, 'item| add:2');
-        shouldThrow(attempt, 'item|add :2');
-        shouldThrow(attempt, 'item|add: 2');
-        shouldThrow(attempt, 'item|add|:2|sub');
-        shouldThrow(attempt, 'item|add:2 |sub');
+        expect(function () { return new FilterExpression('item| add:2'); }).toThrow();
+        expect(function () { return new FilterExpression('item|add :2'); }).toThrow();
+        expect(function () { return new FilterExpression('item|add: 2'); }).toThrow();
+        expect(function () { return new FilterExpression('item|add|:2|sub'); }).toThrow();
+        // TODO: should these fail??
+        //expect(function () { return new FilterExpression('item |add:2'); }).toThrow();
+        //expect(function () { return new FilterExpression('item|add:2 |sub'); }).toThrow();
     });
 
-    test('output (without filters) should be escaped if autoescaping is on', function () {
+    it('output (without filters) should be escaped if autoescaping is on', function () {
         var context = new Context({test: '<script>'});
         context.autoescaping = true;
         var expr = new FilterExpression("test");
-        assertEquals('&lt;script&gt;', expr.resolve(context));
+        expect( expr.resolve(context)).toBe('&lt;script&gt;');
     });
 
-    test('output (without filters) should not be escaped if autoescaping is off', function () {
+    it('output (without filters) should not be escaped if autoescaping is off', function () {
         var context = new Context({test: '<script>'});
         context.autoescaping = false;
         var expr = new FilterExpression("test");
-        assertEquals('<script>', expr.resolve(context));
+        expect( expr.resolve(context)).toBe('<script>');
     });
-    test('safe filter should prevent escaping', function () {
+    it('safe filter should prevent escaping', function () {
         var context = new Context({test: '<script>'});
         context.autoescaping = true;
         var expr = new FilterExpression("test|safe|upper");
-        assertEquals('<SCRIPT>', expr.resolve(context));
+        expect( expr.resolve(context)).toBe('<SCRIPT>');
     });
-    test('escape filter should force escaping', function () {
+    it('escape filter should force escaping', function () {
         var context = new Context({test: '<script>'});
         context.autoescaping = false;
         var expr = new FilterExpression("test|escape|upper");
-        assertEquals('&lt;SCRIPT&gt;', expr.resolve(context));
+        expect( expr.resolve(context)).toBe('&lt;SCRIPT&gt;');
     });
-    test('filterexpression should work with variable as arg', function () {
+    it('filterexpression should work with variable as arg', function () {
         var context = new Context({test: 4, arg: 38 });
         var expr = new FilterExpression("test|add:arg");
-        assertEquals(42, expr.resolve(context));
+        expect( expr.resolve(context)).toBe(42);
     });
+});
 
-testcase('Context test');
-    setup( function () {
-        var tc = {
+describe('Context test', function () {
+
+    var tc;
+
+    beforeEach( function () {
+        tc = {
             plain: {
                 a: 5,
                 b: 'hest',
@@ -121,71 +162,79 @@ testcase('Context test');
         return tc;
     });
 
-    test('test get from first level', function (tc) {
+    it('should support get from first level', function () {
         for (x in tc.plain) {
-            assertEquals(tc.plain[x], tc.context.get(x));
+            expect(tc.context.get(x)).toEqual(tc.plain[x]);
         }
     });
 
-    test('test get string literal', function (tc) {
-        assertEquals(5, tc.context.get('a'));
-        assertEquals('a', tc.context.get("'a'"));
-        assertEquals('a', tc.context.get('"a"'));
+    it('should support get string literal', function () {
+        expect( tc.context.get('a')).toBe(5);
+        expect( tc.context.get("'a'")).toBe('a');
+        expect( tc.context.get('"a"')).toBe('a');
     });
 
-    test('test set', function (tc) {
+    it('should support set', function () {
         tc.context.set('a', tc.plain.a + 100);
-        assertEquals(tc.plain.a + 100, tc.context.get('a'));
+        expect( tc.context.get('a')).toBe(tc.plain.a + 100);
     });
 
-    test('test push and pop', function (tc) {
-        assertEquals(tc.plain.a, tc.context.get('a'));
+    it('ould support push and pop', function () {
+        expect( tc.context.get('a')).toBe(tc.plain.a);
 
         tc.context.push();
 
-        assertEquals(tc.plain.a, tc.context.get('a'));
+        expect( tc.context.get('a')).toBe(tc.plain.a);
         tc.context.set('a', tc.plain.a + 18);
-        assertEquals(tc.plain.a + 18, tc.context.get('a'));
+        expect( tc.context.get('a')).toBe(tc.plain.a + 18);
 
         tc.context.pop();
-        assertEquals(tc.plain.a, tc.context.get('a'));
+        expect( tc.context.get('a')).toBe(tc.plain.a);
+    });
+});
+
+describe('parser', function () {
+    it('should pass sanity test for parser', function () {
+        var result, done = false;
+        runs(function () {
+            t = parse('hest');
+            t.render({}, function (e, r) { done = true; result = r; });
+        });
+        waitsFor(function () { return done; }, "render took too long", 1000);
+        runs(function () { expect(result).toBe('hest'); });
     });
 
-testcase('parser')
-    test_async('should parse', function (testcontext, complete) {
-        t = parse('hest');
-        t.render({}, function (error, result) {
-            assertEquals('hest', result, complete);
-            end_async_test( complete );
-        });
-    });
-    test('node_list only_types should return only requested typed', function () {
+    it('should only return should return only requested types from node_list.only_types ', function () {
         t = parse('{% comment %}hest{% endcomment %}hest{% comment %}laks{% endcomment %}{% hest %}');
-        assertEquals(['comment','comment'], t.node_list.only_types('comment').map(function(x){return x.type}));
-        assertEquals(['text','UNKNOWN'], t.node_list.only_types('text', 'UNKNOWN').map(function(x){return x.type}));
+        expect(t.node_list.only_types('comment').map(function(x){return x.type;})).toEqual(['comment','comment']); 
+        expect(t.node_list.only_types('text', 'UNKNOWN').map(function(x){return x.type;})).toEqual(['text','UNKNOWN']);
     });
-    test_async('should parse "%"', function (testcontext, complete) {
-        t = parse('1 % of this, this is 100% nice! %');
-        t.render({}, function (error, result) {
-            assertEquals('1 % of this, this is 100% nice! %', result, complete);
-            end_async_test( complete );
+
+    it('should parse "%"', function () {
+        var result, done = false;
+        runs(function () {
+            t = parse('1 % of this, this is 100% nice! %');
+            t.render({}, function (e, r) { done = true; result = r; });
         });
+        waitsFor(function () { return done; }, "render took too long", 1000);
+        runs(function () { expect(result).toBe('1 % of this, this is 100% nice! %'); });
     });
+});
 
-testcase('nodelist evaluate');
-    test_async('should work sync', function (testcontext, complete) {
-
+describe('nodelist evaluate', function () {
+    it ('should evaluate node_list', function () {
+        
         var context = {};
         var node_list = make_nodelist();
         node_list.append( function (context, callback) { callback(false, 'hest'); }, 'test');
         node_list.append( function (context, callback) { callback(false, 'giraf'); }, 'test');
         node_list.append( function (context, callback) { callback(false, ' med lang hals'); }, 'test');
 
-        node_list.evaluate( context, function (error, result) {
-            assertEquals('hestgiraf med lang hals', result, complete);
-            end_async_test( complete );
-        });
+        var result, done = false;
+        runs(function () { node_list.evaluate(context, function (e,r) { done = true; result = r; }); });
+        waitsFor(function () { return done; }, "evaluate took too long", 1000);
+        runs(function () { expect(result).toBe('hestgiraf med lang hals'); });
     });
+});
 
-run();
 

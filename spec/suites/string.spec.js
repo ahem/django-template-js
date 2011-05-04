@@ -1,49 +1,51 @@
-var sys = require('sys');
-var extend = require('../djangode/utils/base').extend;
+var extend = require('../../lib/utils/base').extend;
+extend(GLOBAL, require('../../lib/utils/string'));
 
-extend(GLOBAL, require('../djangode/utils/test').dsl);
-extend(GLOBAL, require('../djangode/utils/string'));
+describe('string utility functions', function () {
+    it('smart_split should split correctly', function () {
+        expect(smart_split('this is "the \\"correct\\" way"')).toEqual(['this', 'is', '"the \\"correct\\" way"']);
+    });
+    it('add_slashes should add slashes', function () {
+        expect(add_slashes('this is "it"')).toBe('this is \\"it\\"');
+    });
+    it('cap_first should capitalize first letter', function () {
+        expect(cap_first('yeah baby!')).toBe('Yeah baby!');
+    });
+    it('center should center text', function () {
+        expect(center('centered', 18)).toBe('     centered     ');
+        expect(center('centere', 18)).toBe('     centere      ');
+        expect(center('centered', 17)).toBe('    centered     ');
+        expect(center('centered', 3)).toBe('centered');
+    });
+});
 
-testcase('string utility functions');
-    test('smart_split should split correctly', function () {
-        assertEquals(['this', 'is', '"the \\"correct\\" way"'], smart_split('this is "the \\"correct\\" way"'));
+describe('titleCaps', function () {
+    it('should work as expected', function () {
+        expect(titleCaps("Nothing to Be Afraid of?")).toBe("Nothing to Be Afraid Of?");
+        expect(titleCaps("Q&A With Steve Jobs: 'That's What Happens In Technology'"))
+            .toBe("Q&A With Steve Jobs: 'That's What Happens in Technology'");
     });
-    test('add_slashes should add slashes', function () {
-        assertEquals('this is \\"it\\"', add_slashes('this is "it"'));
+});
+
+describe('wrap', function () {
+    it('should wrap text', function () {
+        expect(wordwrap('Joel is a slug', 5)).toBe('Joel \nis a \nslug');
     });
-    test('cap_first should capitalize first letter', function () {
-        assertEquals('Yeah baby!', cap_first('yeah baby!'));
-    });
-    test('center should center text', function () {
-        assertEquals('     centered     ', center('centered', 18));
-        assertEquals('     centere      ', center('centere', 18));
-        assertEquals('    centered     ', center('centered', 17));
-        assertEquals('centered', center('centered', 3));
-    });
-testcase('titleCaps')
-    test('should work as expected', function () {
-        assertEquals("Nothing to Be Afraid Of?", titleCaps("Nothing to Be Afraid of?"));
-        assertEquals("Q&A With Steve Jobs: 'That's What Happens in Technology'",
-            titleCaps("Q&A With Steve Jobs: 'That's What Happens In Technology'")
-        );
-    })
-testcase('wrap')
-    test('should wrap text', function () {
-        assertEquals('Joel \nis a \nslug', wordwrap('Joel is a slug', 5));
-    });
-testcase('regex_to_string')
-    test('should work without groups', function () {
-        assertEquals('hest', regex_to_string(/hest/));
-        assertEquals('hest', regex_to_string(/^hest$/));
-        assertEquals('hestgiraf', regex_to_string(/hest\s*giraf\d+/));
-        assertEquals('hest*', regex_to_string(/hest\*/));
-        assertEquals('hestgiraf', regex_to_string(/hest(tobis)giraf/));
+});
+
+describe('regex_to_string', function () {
+    it('should work without groups', function () {
+        expect(regex_to_string(/hest/)).toBe('hest');
+        expect(regex_to_string(/^hest$/)).toBe('hest');
+        expect(regex_to_string(/hest\s*giraf\d+/)).toBe('hestgiraf');
+        expect(regex_to_string(/hest\*/)).toBe('hest*');
+        expect(regex_to_string(/hest(tobis)giraf/)).toBe('hestgiraf');
     });
     
-    test('should replace groups with input', function () {
-        assertEquals('shows/hest/34/', regex_to_string(/^shows\/(\w+)\/(\d+)\/$/, ['hest', 34]));
-        assertEquals('shows/giraf/90/', regex_to_string(/^shows\/(hest(?:laks|makrel))\/(\d+)\/$/, ['giraf', 90]));
+    it('should replace groups with input', function () {
+        expect(regex_to_string(/^shows\/(\w+)\/(\d+)\/$/, ['hest', 34])).toBe('shows/hest/34/');
+        expect(regex_to_string(/^shows\/(hest(?:laks|makrel))\/(\d+)\/$/, ['giraf', 90])).toBe('shows/giraf/90/');
     });
+});
 
-run();
 

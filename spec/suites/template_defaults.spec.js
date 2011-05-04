@@ -1,208 +1,259 @@
-var sys = require('sys');
-var extend = require('../djangode/utils/base').extend;
-extend(GLOBAL, require('../djangode/utils/test').dsl);
-extend(GLOBAL, require('../djangode/template/template_defaults'));
 
-testcase('add')
-    test('should add correctly', function () {
-        assertEquals(6, filters.add(4, 2));
-        assertEquals(6, filters.add('4', 2));
-        assertEquals('', filters.add('a', 2));
-        assertEquals('', filters.add(2, 'a'));
+var extend = require('../../lib/utils/base').extend;
+var template = require('../../lib/template/template_defaults');
+
+var LOG = console ? console.log : require('util').debug;
+
+describe('add', function () {
+    it('should add correctly', function () {
+        expect( filters.add(4, 2)).toBe(6);
+        expect( filters.add('4', 2)).toBe(6);
+        expect( filters.add('a', 2)).toBe('');
+        expect( filters.add(2, 'a')).toBe('');
     });
-testcase('addslashes')
-    test('should add slashes correctly', function () {
-        assertEquals('he said \\"she said\\"', filters.addslashes('he said \"she said\"'));
-        assertEquals('6', filters.addslashes(6));
+});
+
+describe('addslashes', function () {
+    it('should add slashes correctly', function () {
+        expect( filters.addslashes('he said \"she said\"')).toBe('he said \\"she said\\"');
+        expect( filters.addslashes(6)).toBe('6');
     });
-testcase('capfirst')
-    test('should capitalize first letter correctly', function () {
-        assertEquals('Somewhere over the rainbow', filters.capfirst('somewhere over the rainbow'));
-        assertEquals('6', filters.capfirst(6));
+});
+
+describe('capfirst', function () {
+    it('should capitalize first letter correctly', function () {
+        expect( filters.capfirst('somewhere over the rainbow')).toBe('Somewhere over the rainbow');
+        expect( filters.capfirst(6)).toBe('6');
     });
-testcase('center')
-    test('center value', function () {
-        assertEquals('     centered     ', filters.center('centered', 18));
-        assertEquals('        6         ', filters.center(6, 18));
+});
+
+describe('center', function () {
+    it('center value', function () {
+        expect( filters.center('centered', 18)).toBe('     centered     ');
+        expect( filters.center(6, 18)).toBe('        6         ');
     })
-testcase('cut')
-    test('remove unwanted letters', function () {
-        assertEquals('SomewhereOverTheRainbow', filters.cut('Somewhere Over The Rainbow', ' '));
+});
+
+describe('cut', function () {
+    it('remove unwanted letters', function () {
+        expect( filters.cut('Somewhere Over The Rainbow', ' ')).toBe('SomewhereOverTheRainbow');
     });
-testcase('date')
-    test('correctly format Britneys birthdate', function () {
-        assertEquals('December 2, 1981', filters.date(new Date('12-02-1981'), 'F j, Y'));
-        assertEquals('', filters.date('hest', 'F j, Y'));
+});
+
+describe('date', function () {
+    it('correctly format Britneys birthdate', function () {
+        expect(filters.date(new Date('12-02-1981'), 'F j, Y')).toBe('December 2, 1981');
+        expect(filters.date('hest', 'F j, Y')).toBe('');
     });
-testcase('default')
-    test('work as expected', function () {
-        assertEquals(6, filters['default'](false, 6));  
+});
+
+describe('default', function () {
+    it('work as expected', function () {
+        expect( filters['default'](false, 6)).toBe(6);
     })
-testcase('default_if_none')
-    test('work as expected', function () {
-        assertEquals(false, filters.default_if_none(false, 6));  
-        assertEquals(6, filters.default_if_none(null, 6));  
-        assertEquals(6, filters.default_if_none(undefined, 6));  
+});
+
+describe('default_if_none', function () {
+    it('work as expected', function () {
+        expect( filters.default_if_none(false, 6)).toBe(false);
+        expect( filters.default_if_none(null, 6)).toBe(6);
+        expect( filters.default_if_none(undefined, 6)).toBe(6);
     })
-testcase('Test dictsort filter');
-    test('should sort correctly', function () {
+});
+
+describe('Test dictsort filter', function () {
+    it('should sort correctly', function () {
         var list = [
             {'name': 'zed', 'age': 19},
             {'name': 'amy', 'age': 22},
             {'name': 'joe', 'age': 31}
         ];
         var before = list.slice(0);
-        assertEquals([ list[1], list[2], list[0] ], filters.dictsort(list, 'name') );
-        assertEquals(before, list);
+        expect(filters.dictsort(list, 'name')).toEqual([ list[1], list[2], list[0] ]);
+        expect(list).toEqual(before);
     });
 
-testcase('dictsortreversed filter');
-    test('should sort correctly with dictsortreversed', function () {
+});
+
+describe('dictsortreversed filter', function () {
+    it('should sort correctly with dictsortreversed', function () {
         var list = [
             {'name': 'zed', 'age': 19},
             {'name': 'amy', 'age': 22},
             {'name': 'joe', 'age': 31}
         ];
         var before = list.slice(0);
-        assertEquals([ list[0], list[2], list[1] ], filters.dictsortreversed(list, 'name') );
-        assertEquals(before, list);
+        expect(filters.dictsortreversed(list, 'name') ).toEqual([ list[0], list[2], list[1] ]);
+        expect(list).toEqual(before);
     });
 
-testcase('divisibleby filter')
-    test('correctly determine if value is divisible with arg', function () {
-        assertEquals(true,  filters.divisibleby(4, 2));
-        assertEquals(false,  filters.divisibleby(5, 2));
-        assertEquals(false,  filters.divisibleby('hest', 2));
-        assertEquals(false,  filters.divisibleby('hest'));
+});
+
+describe('divisibleby filter', function () {
+    it('should correctly determine if value is divisible with arg', function () {
+        expect( filters.divisibleby(4, 2)).toBe(true);
+        expect( filters.divisibleby(5, 2)).toBe(false);
+        expect( filters.divisibleby('hest', 2)).toBe(false);
+        expect( filters.divisibleby('hest')).toBe(false);
     });
 
-testcase('escapejs filter')
-    test('correctly escape value', function () {
-        assertEquals(escape('æøå&&Ø ""\n'), filters.escapejs('æøå&&Ø ""\n'));
-        assertEquals('6', filters.escapejs(6));
-        assertEquals('', filters.escapejs());
+});
+
+describe('escapejs filter', function () {
+    it('should correctly escape value', function () {
+        expect( filters.escapejs('æøå&&Ø ""\n')).toBe(escape('æøå&&Ø ""\n'));
+        expect( filters.escapejs(6)).toBe('6');
+        expect( filters.escapejs()).toBe('');
 
     });
 
-testcase('filesizeformat filter');
-    test('should return correct readable filesizes', function () {
-        assertEquals('117.7MB', filters.filesizeformat(123456789));
+});
+
+describe('filesizeformat filter', function () {
+    it('should return correct readable filesizes', function () {
+        expect( filters.filesizeformat(123456789)).toBe('117.7MB');
     });
 
-testcase('first filter');
-    test('should return first in list', function () {
-        assertEquals('', filters.first('hest'));
-        assertEquals('hest', filters.first(['hest', 'abe', 39]));
+});
+
+describe('first filter', function () {
+    it('should return first in list', function () {
+        expect( filters.first('hest')).toBe('');
+        expect( filters.first(['hest', 'abe', 39])).toBe('hest');
     });
 
-testcase('fix_ampersands');
-    test('should fix ampersands', function () {
-        assertEquals('Tom &amp; Jerry', filters.fix_ampersands('Tom & Jerry', null, {}));
+});
+
+describe('fix_ampersands', function () {
+    it('should fix ampersands', function () {
+        expect( filters.fix_ampersands('Tom & Jerry', null, {})).toBe('Tom &amp; Jerry');
     });
-    test('string should be marked as safe', function () {
+    it('string should be marked as safe', function () {
         var safety = {};
         filters.fix_ampersands('Tom & Jerry', {}, safety);
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
 
-testcase('floatformat filter');
-    test('should format floats', function () {
-        assertEquals('', filters.floatformat('hest'));
+});
 
-        assertEquals('34.2', filters.floatformat(34.23234));
-        assertEquals('34',   filters.floatformat(34.00000));
-        assertEquals('34.3', filters.floatformat(34.26000));
+describe('floatformat filter', function () {
+    it('should format floats', function () {
+        expect( filters.floatformat('hest')).toBe('');
 
-        assertEquals('34.232', filters.floatformat(34.23234, 3));
-        assertEquals('34.000', filters.floatformat(34.00000, 3));
-        assertEquals('34.260', filters.floatformat(34.26000, 3));
+        expect( filters.floatformat(34.23234)).toBe('34.2');
+        expect( filters.floatformat(34.00000)).toBe('34');
+        expect( filters.floatformat(34.26000)).toBe('34.3');
 
-        assertEquals('34.232', filters.floatformat(34.23234, -3));
-        assertEquals('34',     filters.floatformat(34.00000, -3));
-        assertEquals('34.260', filters.floatformat(34.26000, -3));
+        expect( filters.floatformat(34.23234, 3)).toBe('34.232');
+        expect( filters.floatformat(34.00000, 3)).toBe('34.000');
+        expect( filters.floatformat(34.26000, 3)).toBe('34.260');
+
+        expect( filters.floatformat(34.23234, -3)).toBe('34.232');
+        expect( filters.floatformat(34.00000, -3)).toBe('34');
+        expect( filters.floatformat(34.26000, -3)).toBe('34.260');
     });
-testcase('force_escape filter');
-    test('should escape string', function () {
-        assertEquals(
-            '&lt;script=&#34;alert(&#39;din mor&#39;)&#34;&gt;&lt;/script&gt;',
+});
+
+describe('force_escape filter', function () {
+    it('should escape string', function () {
+        expect(
             filters.force_escape('<script="alert(\'din mor\')"></script>', null, {})
+        ).toBe(
+            '&lt;script=&#34;alert(&#39;din mor&#39;)&#34;&gt;&lt;/script&gt;'
         );
     });
-    test('string should be marked as safe', function () {
+    it('string should be marked as safe', function () {
         var safety = {};
-        filters.force_escape('<script="alert(\'din mor\')"></script>', null, safety)
-        assertEquals(true, safety.is_safe);
+        filters.force_escape('<script="alert(\'din mor\')"></script>', null, safety);
+        expect( safety.is_safe).toBe(true);
+    });
+});
+
+describe('get_digit', function () {
+    it('should get correct digit', function () {
+        expect( filters.get_digit(987654321, 2)).toBe(2);
+        expect( filters.get_digit('987654321', 2)).toBe('987654321');
+        expect( filters.get_digit('hest'), 2).toBe('hest');
+        expect( filters.get_digit(123), 5).toBe(123);
+        expect( filters.get_digit(123), 0).toBe(123);
     });
 
-testcase('get_digit');
-    test('should get correct digit', function () {
-        assertEquals(2,           filters.get_digit(987654321, 2));
-        assertEquals('987654321', filters.get_digit('987654321', 2));
-        assertEquals('hest',      filters.get_digit('hest'), 2);
-        assertEquals(123,         filters.get_digit(123), 5);
-        assertEquals(123,         filters.get_digit(123), 0);
-    });
+});
 
-testcase('join filter')
-    test('should join list', function () {
-        assertEquals('1, 2, 3, 4', filters.join([1,2,3,4], ', '));
-        assertEquals('', filters.join('1,2,3,4', ', '));
+describe('join filter', function () {
+    it('should join list', function () {
+        expect(filters.join([1,2,3,4], ', ')).toBe('1, 2, 3, 4');
+        expect( filters.join('1,2,3,4', ', ')).toBe('');
     });
-testcase('last filter')
-    test('should return last', function () {
-        assertEquals('d', filters.last(['a', 'b', 'c', 'd']));
-        assertEquals('', filters.last([]));
-        assertEquals('', filters.last('hest'));
+});
+
+describe('last filter', function () {
+    it('should return last', function () {
+        expect( filters.last(['a', 'b', 'c', 'd'])).toBe('d');
+        expect( filters.last([])).toBe('');
+        expect( filters.last('hest')).toBe('');
     });
-testcase('length filter')
-    test('should return correct length', function () {
-        assertEquals(5, filters.length([1,2,3,4,5]));
-        assertEquals(4, filters.length('hest'));
-        assertEquals(0, filters.length(16));
+});
+
+describe('length filter', function () {
+    it('should return correct length', function () {
+        expect( filters.length([1,2,3,4,5])).toBe(5);
+        expect( filters.length('hest')).toBe(4);
+        expect( filters.length(16)).toBe(0);
     });
-testcase('length_is filter')
-    test('should return true on correct length', function () {
-        assertEquals(true, filters.length_is([1,2,3,4,5], 5));
-        assertEquals(true, filters.length_is('hest', 4));
+});
+
+describe('length_is filter', function () {
+    it('should return true on correct length', function () {
+        expect( filters.length_is([1,2,3,4,5], 5)).toBe(true);
+        expect( filters.length_is('hest', 4)).toBe(true);
     });
-    test('should return false on incorrect length or bad arguments', function () {
-        assertEquals(false, filters.length_is([1,2,3,4,5], 2));
-        assertEquals(false, filters.length_is('hest', 16));
-        assertEquals(false, filters.length_is(16, 4));
-        assertEquals(false, filters.length_is('hest'));
+    it('should return false on incorrect length or bad arguments', function () {
+        expect( filters.length_is([1,2,3,4,5], 2)).toBe(false);
+        expect( filters.length_is('hest', 16)).toBe(false);
+        expect( filters.length_is(16, 4)).toBe(false);
+        expect( filters.length_is('hest')).toBe(false);
     });
-testcase('linebreaks')
-    test('linebreaks should be converted to <p> and <br /> tags.', function () {
-        assertEquals('<p>Joel<br />is a slug</p>', filters.linebreaks('Joel\nis a slug', null, {}));
+});
+
+describe('linebreaks', function () {
+    it('linebreaks should be converted to <p> and <br /> tags.', function () {
+        expect( filters.linebreaks('Joel\nis a slug', null, {})).toBe('<p>Joel<br />is a slug</p>');
     });
-    test('string should be marked as safe', function () {
+    it('string should be marked as safe', function () {
         var safety = {};
         filters.linebreaks('Joel\nis a slug', null, safety)
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
-    test('string should be escaped if requsted', function () {
+    it('string should be escaped if requsted', function () {
         var safety = { must_escape: true };
         var actual = filters.linebreaks('Two is less than three\n2 < 3', null, safety)
-        assertEquals('<p>Two is less than three<br />2 &lt; 3</p>', actual)
+        expect(actual).toBe('<p>Two is less than three<br />2 &lt; 3</p>')
     });
-testcase('linebreaksbr')
-    test('linebreaks should be converted to <br /> tags.', function () {
-        assertEquals('Joel<br />is a slug.<br />For sure...',
+});
+
+describe('linebreaksbr', function () {
+    it('linebreaks should be converted to <br /> tags.', function () {
+        expect(
             filters.linebreaksbr('Joel\nis a slug.\nFor sure...', null, {})
+        ).toBe(
+            'Joel<br />is a slug.<br />For sure...'
         );
     });
-    test('string should be marked as safe', function () {
+    it('string should be marked as safe', function () {
         var safety = {};
-        filters.linebreaksbr('Joel\nis a slug', null, safety)
-        assertEquals(true, safety.is_safe);
+        filters.linebreaksbr('Joel\nis a slug', null, safety);
+        expect( safety.is_safe).toBe(true);
     });
-    test('string should be escaped if requsted', function () {
+    it('string should be escaped if requsted', function () {
         var safety = { must_escape: true };
-        var actual = filters.linebreaksbr('Two is less than three\n2 < 3', null, safety)
-        assertEquals('Two is less than three<br />2 &lt; 3', actual)
+        var actual = filters.linebreaksbr('Two is less than three\n2 < 3', null, safety);
+        expect(actual).toBe('Two is less than three<br />2 &lt; 3');
     });
-testcase('linenumbers')
-    test('should add linenumbers to text', function () {
+});
+
+describe('linenumbers', function () {
+    it('should add linenumbers to text', function () {
 
         var s = "But I must explain to you how all this mistaken idea of\n"
             + "denouncing pleasure and praising pain was born and I will\n"
@@ -215,7 +266,7 @@ testcase('linenumbers')
             + "is there anyone who loves or pursues or desires to obtain pain\n"
             + "of itself, because it is pain, but because occasionally\n"
             + "circumstances occur in which toil and pain can procure him\n"
-            + "some great pleasure. To take a trivial example, which of us"
+            + "some great pleasure. To take a trivial example, which of us";
 
         var expected = "01. But I must explain to you how all this mistaken idea of\n"
             + "02. denouncing pleasure and praising pain was born and I will\n"
@@ -228,232 +279,288 @@ testcase('linenumbers')
             + "09. is there anyone who loves or pursues or desires to obtain pain\n"
             + "10. of itself, because it is pain, but because occasionally\n"
             + "11. circumstances occur in which toil and pain can procure him\n"
-            + "12. some great pleasure. To take a trivial example, which of us"
+            + "12. some great pleasure. To take a trivial example, which of us";
 
-        assertEquals(expected, filters.linenumbers(s, null, {}));
+        expect( filters.linenumbers(s, null, {})).toBe(expected);
     });
-    test('string should be marked as safe', function () {
+    it('string should be marked as safe', function () {
         var safety = {};
-        filters.linenumbers('Joel\nis a slug', null, safety)
-        assertEquals(true, safety.is_safe);
+        filters.linenumbers('Joel\nis a slug', null, safety);
+        expect( safety.is_safe).toBe(true);
     });
-    test('string should be escaped if requsted', function () {
+    it('string should be escaped if requsted', function () {
         var safety = { must_escape: true };
-        var actual = filters.linenumbers('Two is less than three\n2 < 3', null, safety)
-        assertEquals('1. Two is less than three\n2. 2 &lt; 3', actual)
+        var actual = filters.linenumbers('Two is less than three\n2 < 3', null, safety);
+        expect(actual).toBe('1. Two is less than three\n2. 2 &lt; 3');
     });
-testcase('ljust')
-    test('should left justify value i correctly sized field', function () {
-        assertEquals('hest      ', filters.ljust('hest', 10)); 
-        assertEquals('', filters.ljust('hest')); 
-        assertEquals('he', filters.ljust('hest', 2)); 
+});
+
+describe('ljust', function () {
+    it('should left justify value i correctly sized field', function () {
+        expect( filters.ljust('hest', 10)).toBe('hest      ');
+        expect( filters.ljust('hest')).toBe('');
+        expect( filters.ljust('hest', 2)).toBe('he');
     });
-testcase('lower')
-    test('should lowercase value', function () {
-        assertEquals('somewhere over the rainbow', filters.lower('Somewhere Over the Rainbow'));
-        assertEquals('', filters.lower(19));
+});
+
+describe('lower', function () {
+    it('should lowercase value', function () {
+        expect( filters.lower('Somewhere Over the Rainbow')).toBe('somewhere over the rainbow');
+        expect( filters.lower(19)).toBe('');
     });
-testcase('make_list');
-    test('work as expected', function () {
-        assertEquals(['J', 'o', 'e', 'l'], filters.make_list('Joel'));
-        assertEquals(['1', '2', '3'], filters.make_list('123'));
+});
+
+describe('make_list', function () {
+    it('should make_list as expected', function () {
+        expect(filters.make_list('Joel')).toEqual(['J', 'o', 'e', 'l']);
+        expect(filters.make_list('123')).toEqual(['1', '2', '3']);
     });
-testcase('phone2numeric')
-    test('convert letters to numbers phone number style', function () {
-        assertEquals('800-2655328', filters.phone2numeric('800-COLLECT'));
-        assertEquals('2223334445556667q77888999z', filters.phone2numeric('abcdefghijklmnopqrstuvwxyz'));
+});
+
+describe('phone2numeric', function () {
+    it('should convert letters to numbers phone number style', function () {
+        expect( filters.phone2numeric('800-COLLECT')).toBe('800-2655328');
+        expect( filters.phone2numeric('abcdefghijklmnopqrstuvwxyz')).toBe('2223334445556667q77888999z');
     });
-testcase('pluralize');
-    test('pluralize correctly', function() {
-        assertEquals('', filters.pluralize('sytten'));
-        assertEquals('', filters.pluralize(1));
-        assertEquals('s', filters.pluralize(2));
-        assertEquals('', filters.pluralize(1, 'es'));
-        assertEquals('es', filters.pluralize(2, 'es'));
-        assertEquals('y', filters.pluralize(1, 'y,ies'));
-        assertEquals('ies', filters.pluralize(2, 'y,ies'));
+});
+
+describe('pluralize', function () {
+    it('should pluralize correctly', function() {
+        expect( filters.pluralize('sytten')).toBe('');
+        expect( filters.pluralize(1)).toBe('');
+        expect( filters.pluralize(2)).toBe('s');
+        expect( filters.pluralize(1, 'es')).toBe('');
+        expect( filters.pluralize(2, 'es')).toBe('es');
+        expect( filters.pluralize(1, 'y,ies')).toBe('y');
+        expect( filters.pluralize(2, 'y,ies')).toBe('ies');
     });
-testcase('pprint');
-    test("should not throw and not return ''", function () {
-        var response = filters.pprint( filters );
-        if (!response) { fail('response is empty!'); }
+});
+
+describe('pprint', function () {
+    it("should not throw and not return ''", function () {
+        expect(filters.pprint( filters )).toBeTruthy();
     });
-testcase('random');
-    // TODO: The testcase for random is pointless and should be improved
-    test('should return an element from the list', function () {
-        var arr = ['h', 'e', 's', 't'];
-        var response = filters.random(arr);
-        if (arr.indexOf(response) < 0) {
-            fail('returned element not in array!');
-        }
+});
+
+describe('random', function () {
+    // TODO: The test for random is pointless and should be improved
+    it('should return an element from the list', function () {
+        expect(filters.random(['h', 'e', 's', 't'])).not.toBeLessThan(0);
     });
-    test('should return empty string when passed non array', function () {
-        assertEquals('', filters.random( 25 ));
+    it('should return empty string when passed non array', function () {
+        expect( filters.random( 25 )).toBe('');
     });
-testcase('removetags');
-    test('should remove tags', function () {
-        assertEquals('Joel <button>is</button> a slug',
-            filters.removetags('<b>Joel</b> <button>is</button> a <span\n>slug</span>', 'b span', {}));
-    });
-    test('string should be marked as safe', function () {
-        var safety = {};
-        filters.removetags('<b>Joel</b> <button>is</button> a <span\n>slug</span>', 'b span', safety);
-        assertEquals(true, safety.is_safe);
-    });
-testcase('rjust')
-    test('should right justify value in correctly sized field', function () {
-        assertEquals('      hest', filters.rjust('hest', 10)); 
-        assertEquals('', filters.rjust('hest')); 
-        assertEquals('he', filters.rjust('hest', 2)); 
-    });
-testcase('slice')
-    var arr = [0,1,2,3,4,5,6,7,8,9];
-    test('slice should slice like python', function () {
-        assertEquals([0,1,2,3], filters.slice(arr, ":4"));
-        assertEquals([6,7,8,9], filters.slice(arr, "6:"));
-        assertEquals([2,3,4], filters.slice(arr, "2:5"));
-        assertEquals([2,5,8], filters.slice(arr, "2::3"));
-        assertEquals([2,5], filters.slice(arr, "2:6:3"));
-    });
-    test('slice should handle bad values', function () {
-        assertEquals([],        filters.slice(36, ":4"));
-        assertEquals([0,1,2,3,4,5,6,7,8,9], filters.slice(arr, 'hest'));
-        assertEquals([0,1,2,3,4,5,6,7,8,9], filters.slice(arr));
-    });
-testcase('slugify');
-    test('should slugify correctly', function () {
-        assertEquals('joel-is-a-slug', filters.slugify('Joel is a slug'));
-        assertEquals('s-str-verden-da-ikke-lngere', filters.slugify('Så står Verden da ikke længere!'));
-        assertEquals('super_max', filters.slugify('Super_Max'));
-    });
-testcase('stringformat');
-    test('return expected results', function () {
-        assertEquals('002', filters.stringformat(2, '03d'));
-        assertEquals('Hest', filters.stringformat('Hest', 's'));
-        assertEquals('', filters.stringformat('Hest', ''));
-        assertEquals('Hest      ', filters.stringformat('Hest', '-10s'));
-    });
-testcase('striptags');
-    test('should remove tags', function () {
-        assertEquals('jeg har en dejlig hest.',
-            filters.striptags('<p>jeg har en <strong\n>dejlig</strong> hest.</p>', null, {})
+});
+
+describe('removetags', function () {
+    it('should remove tags', function () {
+        expect(
+            filters.removetags('<b>Joel</b> <button>is</button> a <span\n>slug</span>', 'b span', {})
+        ).toBe(
+            'Joel <button>is</button> a slug'
         );
     });
-    test('string should be marked as safe', function () {
+    it('should mark string as safe', function () {
+        var safety = {};
+        filters.removetags('<b>Joel</b> <button>is</button> a <span\n>slug</span>', 'b span', safety);
+        expect( safety.is_safe).toBe(true);
+    });
+});
+
+describe('rjust', function () {
+    it('should right justify value in correctly sized field', function () {
+        expect( filters.rjust('hest', 10)).toBe('      hest');
+        expect( filters.rjust('hest')).toBe('');
+        expect( filters.rjust('hest', 2)).toBe('he');
+    });
+});
+
+describe('slice', function () {
+    var arr = [0,1,2,3,4,5,6,7,8,9];
+    it('slice should slice like python', function () {
+        expect(filters.slice(arr, ":4")).toEqual([0,1,2,3]);
+        expect(filters.slice(arr, "6:")).toEqual([6,7,8,9]);
+        expect(filters.slice(arr, "2:5")).toEqual([2,3,4]);
+        expect(filters.slice(arr, "2::3")).toEqual([2,5,8]);
+        expect(filters.slice(arr, "2:6:3")).toEqual([2,5]);
+    });
+    it('slice should handle bad values', function () {
+        expect(filters.slice(36, ":4")).toEqual([]);
+        expect(filters.slice(arr, 'hest')).toEqual([0,1,2,3,4,5,6,7,8,9]);
+        expect(filters.slice(arr)).toEqual([0,1,2,3,4,5,6,7,8,9]);
+    });
+});
+
+describe('slugify', function () {
+    it('should slugify correctly', function () {
+        expect( filters.slugify('Joel is a slug')).toBe('joel-is-a-slug');
+        expect( filters.slugify('Så står Verden da ikke længere!')).toBe('s-str-verden-da-ikke-lngere');
+        expect( filters.slugify('Super_Max')).toBe('super_max');
+    });
+});
+
+describe('stringformat', function () {
+    it('return expected results', function () {
+        expect( filters.stringformat(2, '03d')).toBe('002');
+        expect( filters.stringformat('Hest', 's')).toBe('Hest');
+        expect( filters.stringformat('Hest', '')).toBe('');
+        expect( filters.stringformat('Hest', '-10s')).toBe('Hest      ');
+    });
+});
+
+describe('striptags', function () {
+    it('should remove tags', function () {
+        expect(
+            filters.striptags('<p>jeg har en <strong\n>dejlig</strong> hest.</p>', null, {})
+        ).toBe('jeg har en dejlig hest.');
+    });
+    it('string should be marked as safe', function () {
         var safety = {};
         filters.striptags('<p>jeg har en <strong\n>dejlig</strong> hest.</p>', null, safety);
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
-testcase('title');
-    test('should titlecase correctly', function () {
-        assertEquals('This Is Correct', filters.title('This is correct'));
+});
+
+describe('title', function () {
+    it('should titlecase correctly', function () {
+        expect( filters.title('This is correct')).toBe('This Is Correct');
     });
-testcase('truncatewords');
-    test('should truncate', function () {
-        assertEquals('Joel is ...', filters.truncatewords('Joel is a slug', 2));
+});
+
+describe('truncatewords', function () {
+    it('should truncate', function () {
+        expect( filters.truncatewords('Joel is a slug', 2)).toBe('Joel is ...');
     });
-testcase('upper');
-    test('should uppercase correctly', function () {
-        assertEquals('JOEL IS A SLUG', filters.upper('Joel is a slug'));
+});
+
+describe('upper', function () {
+    it('should uppercase correctly', function () {
+        expect( filters.upper('Joel is a slug')).toBe('JOEL IS A SLUG');
     });
-testcase('urlencode');
-    test('should encode urls', function () {
-        assertEquals('%22Aardvarks%20lurk%2C%20OK%3F%22', filters.urlencode('"Aardvarks lurk, OK?"'));
+});
+
+describe('urlencode', function () {
+    it('should encode urls', function () {
+        expect( filters.urlencode('"Aardvarks lurk, OK?"')).toBe('%22Aardvarks%20lurk%2C%20OK%3F%22');
     });
-testcase('safe');
-    test('string should be marked as safe', function () {
+});
+
+describe('safe', function () {
+    it('string should be marked as safe', function () {
         var safety = {};
         filters.safe('Joel is a slug', null, safety);
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
-testcase('safeseq');
-    test('output should be marked as safe', function () {
+});
+
+describe('safeseq', function () {
+    it('output should be marked as safe', function () {
         var safety = {};
         filters.safe(['hest', 'giraf'], null, safety);
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
-testcase('escape');
-    test('output should be marked as in need of escaping', function () {
+});
+
+describe('escape', function () {
+    it('output should be marked as in need of escaping', function () {
         var safety = { must_escape: false };
         filters.escape('hurra', null, safety);
-        assertEquals(true, safety.must_escape);
+        expect( safety.must_escape).toBe(true);
     });
-testcase('truncatewords_html');
-    test('should truncate and close tags', function () {
-        assertEquals('Joel is ...', filters.truncatewords_html('Joel is a slug', 2, {}));
-        assertEquals('<p>Joel is ...</p>', filters.truncatewords_html('<p>Joel is a slug</p>', 2, {}));
+});
+
+describe('truncatewords_html', function () {
+    it('should truncate and close tags', function () {
+        expect( filters.truncatewords_html('Joel is a slug', 2, {})).toBe('Joel is ...');
+        expect( filters.truncatewords_html('<p>Joel is a slug</p>', 2, {})).toBe('<p>Joel is ...</p>');
     });
-    test('should mark output as safe', function () {
+    it('should mark output as safe', function () {
         var safety = {};
         filters.truncatewords_html('<p>Joel is a slug</p>', 2, safety);
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
-testcase('time');
-    test('correctly format time', function () {
+});
+
+describe('time', function () {
+    it('correctly format time', function () {
         var t = new Date();
         t.setHours('18');
         t.setMinutes('12');
         t.setSeconds('14');
-        assertEquals('18:12:14', filters.time(t, 'H:i:s'));
-        assertEquals('', filters.date('hest', 'H:i:s'));
+        expect( filters.time(t, 'H:i:s')).toBe('18:12:14');
+        expect( filters.date('hest', 'H:i:s')).toBe('');
     });
-testcase('timesince');
-    test('should return time since', function () {
+});
+
+describe('timesince', function () {
+    it('should return time since', function () {
         var blog_date = new Date("1 June 2006 00:00:00");
         var comment_date = new Date("1 June 2006 08:00:00");
-        assertEquals('8 hours', filters.timesince(blog_date, comment_date));
+        expect( filters.timesince(blog_date, comment_date)).toBe('8 hours');
     });
-testcase('timeuntil');
-    test('should return time since', function () {
+});
+
+describe('timeuntil', function () {
+    it('should return time since', function () {
         var today = new Date("1 June 2006");
         var from_date = new Date("22 June 2006");
         var conference_date = new Date("29 June 2006");
-        assertEquals('4 weeks', filters.timeuntil(conference_date, today));
-        assertEquals('1 week', filters.timeuntil(conference_date, from_date));
+        expect( filters.timeuntil(conference_date, today)).toBe('4 weeks');
+        expect( filters.timeuntil(conference_date, from_date)).toBe('1 week');
     });
-testcase('urlize');
-    test('should urlize text', function () {
-        assertEquals(
-            'Check out <a href="http://www.djangoproject.com">www.djangoproject.com</a>',
+});
+
+describe('urlize', function () {
+    it('should urlize text', function () {
+        expect(
             filters.urlize('Check out www.djangoproject.com', null, {})
+        ).toBe(
+            'Check out <a href="http://www.djangoproject.com">www.djangoproject.com</a>'
         );
     });
-    test('should escape if required', function () {
+    it('should escape if required', function () {
         var safety = { must_escape: true };
-        assertEquals('hest &amp; giraf', filters.urlize('hest & giraf', null, safety));
+        expect( filters.urlize('hest & giraf', null, safety)).toBe('hest &amp; giraf');
     });
-    test('should mark output as safe if escaped', function () {
+    it('should mark output as safe if escaped', function () {
         var safety = { must_escape: true };
         filters.urlize('hest', null, safety);
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
-testcase('urlizetrunc');
-    test('should urlize text and truncate', function () {
-        assertEquals(
-            'Check out <a href="http://www.djangoproject.com">www.djangopr...</a>',
+});
+
+describe('urlizetrunc', function () {
+    it('should urlize text and truncate', function () {
+        expect(
             filters.urlizetrunc('Check out www.djangoproject.com', 15, {})
+        ).toBe(
+            'Check out <a href="http://www.djangoproject.com">www.djangopr...</a>'
         );
     });
-    test('should escape if required', function () {
+    it('should escape if required', function () {
         var safety = { must_escape: true };
-        assertEquals('hest &amp; giraf', filters.urlizetrunc('hest & giraf', 15, safety));
+        expect( filters.urlizetrunc('hest & giraf', 15, safety)).toBe('hest &amp; giraf');
     });
-    test('should mark output as safe if escaped', function () {
+    it('should mark output as safe if escaped', function () {
         var safety = { must_escape: true };
         filters.urlizetrunc('hest', 15, safety);
-        assertEquals(true, safety.is_safe);
+        expect( safety.is_safe).toBe(true);
     });
-testcase('wordcount')
-    test('should count words', function () {
-        assertEquals(6, filters.wordcount('I am not an atomic playboy'));
+});
+
+describe('wordcount', function () {
+    it('should count words', function () {
+        expect( filters.wordcount('I am not an atomic playboy')).toBe(6);
     });
-testcase('yesno')
-    test('should return correct value', function () {
-        assertEquals('yeah', filters.yesno(true, "yeah,no,maybe"));
-        assertEquals('no', filters.yesno(false, "yeah,no,maybe"));
-        assertEquals('maybe', filters.yesno(null, "yeah,no,maybe"));
-        assertEquals('maybe', filters.yesno(undefined, "yeah,no,maybe"));
-        assertEquals('no', filters.yesno(undefined, "yeah,no"));
+});
+
+describe('yesno', function () {
+    it('should return correct value', function () {
+        expect( filters.yesno(true, "yeah,no,maybe")).toBe('yeah');
+        expect( filters.yesno(false, "yeah,no,maybe")).toBe('no');
+        expect( filters.yesno(null, "yeah,no,maybe")).toBe('maybe');
+        expect( filters.yesno(undefined, "yeah,no,maybe")).toBe('maybe');
+        expect( filters.yesno(undefined, "yeah,no")).toBe('no');
     });
-run();
+});
 

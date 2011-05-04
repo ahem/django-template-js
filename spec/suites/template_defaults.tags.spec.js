@@ -1,317 +1,359 @@
-var sys = require('sys');
 var fs = require('fs');
-var template = require('../djangode/template/template');
-var extend = require('../djangode/utils/base').extend;
+var extend = require('../../lib/utils/base').extend;
+var template = require('../../lib/template/template');
 
-extend(GLOBAL, require('../djangode/utils/test').dsl);
-extend(GLOBAL, require('../djangode/template/template_defaults'));
+var LOG = console ? console.log : require('util').debug;
+
+extend(GLOBAL, require('../../lib/template/template_defaults'));
 
 function write_file(path, content) {
-    var file = fs.openSync(path, process.O_WRONLY | process.O_TRUNC | process.O_CREAT, 0666);
+    var file = fs.openSync(path, 'w');
     fs.writeSync(file, content);
     fs.closeSync(file);
 }
 
-function make_parse_and_execute_test(expected, tpl, name) {
-
-    name = name ||
-        'should parse "' + (tpl.length < 40 ? tpl : tpl.slice(0, 37) + ' ...') + '"' ;
-
-    test_async(name, function (testcontext, complete) {
-        var parsed = template.parse(tpl);
-        parsed.render(testcontext.obj, function (error, actual) {
-            if (error) {
-                fail( error, complete );
-            } else {
-                assertEquals(expected, actual, complete);
-            }
-            end_async_test( complete );
-        });
-    });
+function it_should_render(tpl) {
+    return {
+        'as': function (expected) {
+            var context = it_should_render._context;
+            it("should render '" + tpl + "' as '" + expected + "'", function () {
+                var actual, done = false;
+                var parsed = template.parse(tpl);
+                runs(function () {
+                    parsed.render(context, function (error, result) {
+                        if (error) {
+                            // TODO: fail!!
+                        } else {
+                            actual = result;
+                            done = true;
+                        }
+                    });
+                });
+                waitsFor(function () { return done; }, "rendering took too long", 500);
+                runs(function () {
+                    expect(actual).toBe(expected);
+                });
+            });
+        }
+    };
+}
+set_render_context = function (context) {
+    it_should_render._context = context;
 }
 
-testcase('fornode')
-    setup( function () { return { obj: { items: [ 1,2,3,4 ], noitems: [] } }; });
-    make_parse_and_execute_test(' 1  2  3  4 ', '{% for item in items %} {{ item }} {% endfor %}');
-    make_parse_and_execute_test('hest',
-        '{% for item in notitems %} {{ item }} {% empty %}hest{% endfor %}');
+describe('fornode', function () {
+    set_render_context({ items: [ 1,2,3,4 ], noitems: [] });
+    it_should_render('{% for item in items %} {{ item }} {% endfor %}').as(' 1  2  3  4 ');
+    it_should_render('{% for item in notitems %} {{ item }} {% empty %}hest{% endfor %}').as('hest');
+});
 
-testcase('variable')
-    setup( function () {
-        return {
-            obj: {
-                num: 18,
-                str: 'hest',
-                bool: false,
-                list: [1,2,'giraf',4],
-                func: function () { return 'tobis'; },
-                obj: { a: 1, b: 2, c: { d: 23, e: { f: 'laks' } } },
-                qstr: '"hest"'
-            }
-        };
+describe('variable', function () {
+
+    set_render_context({
+        num: 18,
+        str: 'hest',
+        bool: false,
+        list: [1,2,'giraf',4],
+        func: function () { return 'tobis'; },
+        obj: { a: 1, b: 2, c: { d: 23, e: { f: 'laks' } } },
+        qstr: '"hest"'
     });
 
-    make_parse_and_execute_test('100', '{{ 100 }}');
-    make_parse_and_execute_test('18', '{{ num }}');
-    make_parse_and_execute_test('hest', '{{ str }}');
-    make_parse_and_execute_test('tobis', '{{ func }}');
-    make_parse_and_execute_test('false', '{{ bool }}');
-    make_parse_and_execute_test('1,2,giraf,4', '{{ list }}');
-    make_parse_and_execute_test('1', '{{ obj.a }}');
-    make_parse_and_execute_test('2', '{{ obj.b }}');
-    make_parse_and_execute_test('laks', '{{ obj.c.e.f }}');
-    make_parse_and_execute_test('', '{{ nonexisting }}');
-    make_parse_and_execute_test('&#34;hest&#34;', '{{ qstr }}');
-    make_parse_and_execute_test('HEST', '{{ "hest"|upper }}');
-    make_parse_and_execute_test('16', '{{ 10|add:"6" }}');
-    make_parse_and_execute_test('0', '{{ 6|add:6|add:"-12" }}');
+    it_should_render('{{ 100 }}').as('100');
+    it_should_render('{{ num }}').as('18');
+    it_should_render('{{ str }}').as('hest');
+    it_should_render('{{ func }}').as('tobis');
+    it_should_render('{{ bool }}').as('false');
+    it_should_render('{{ list }}').as('1,2,giraf,4');
+    it_should_render('{{ obj.a }}').as('1');
+    it_should_render('{{ obj.b }}').as('2');
+    it_should_render('{{ obj.c.e.f }}').as('laks');
+    it_should_render('{{ nonexisting }}').as('');
+    it_should_render('{{ qstr }}').as('&#34;hest&#34;');
+    it_should_render('{{ "hest"|upper }}').as('HEST');
+    it_should_render('{{ 10|add:"6" }}').as('16');
+    it_should_render('{{ 6|add:6|add:"-12" }}').as('0');
+});
 
 
-testcase('ifnode')
-    setup(function () { return { obj: {a: true, b: false }}; }); 
+describe('ifnode', function () {
+    set_render_context({a: true, b: false });
 
-    make_parse_and_execute_test('hest', '{% if a %}hest{% endif %}');
-    make_parse_and_execute_test('', '{% if b %}hest{% endif %}');
-    make_parse_and_execute_test('hest', '{% if not b %}hest{% endif %}');
-    make_parse_and_execute_test('laks', '{% if b %}hest{% else %}laks{% endif %}');
-    make_parse_and_execute_test('hest', '{% if not b and a %}hest{% endif %}');
-    make_parse_and_execute_test('hest', '{% if a or b %}hest{% endif %}');
-    make_parse_and_execute_test('hest', '{% if b or a %}hest{% endif %}');
+    it_should_render('{% if a %}hest{% endif %}').as('hest');
+    it_should_render('{% if b %}hest{% endif %}').as('');
+    it_should_render('{% if not b %}hest{% endif %}').as('hest');
+    it_should_render('{% if b %}hest{% else %}laks{% endif %}').as('laks');
+    it_should_render('{% if not b and a %}hest{% endif %}').as('hest');
+    it_should_render('{% if a or b %}hest{% endif %}').as('hest');
+    it_should_render('{% if b or a %}hest{% endif %}').as('hest');
+});
 
-testcase('textnode')
-    make_parse_and_execute_test('heste er gode laks', 'heste er gode laks');
+describe('textnode', function () {
+    set_render_context({});
+    it_should_render('heste er gode laks').as('heste er gode laks');
+});
 
-testcase('comment')
-    make_parse_and_execute_test('', '{% comment %} do not parse {% hest %} any of this{% endcomment %}');
+describe('comment', function () {
+    set_render_context({});
+    it_should_render('{% comment %} do not parse {% hest %} any of this{% endcomment %}').as('');
+});
 
-testcase('cycle')
-    setup(function () { return { obj: { c: 'C', items: [1,2,3,4,5,6,7,8,9] }}; }); 
-    make_parse_and_execute_test('a1 b2 C3 a4 b5 C6 a7 b8 C9 ',
-        '{% for item in items %}{% cycle \'a\' "b" c %}{{ item }} {% endfor %}');
+describe('cycle', function () {
+    set_render_context({ c: 'C', items: [1,2,3,4,5,6,7,8,9] });
 
-    make_parse_and_execute_test('a H b J c H a', 
+    it_should_render(
+        '{% for item in items %}{% cycle \'a\' "b" c %}{{ item }} {% endfor %}'
+    ).as('a1 b2 C3 a4 b5 C6 a7 b8 C9 ');
+
+    it_should_render(
         '{% cycle "a" "b" "c" as tmp %} {% cycle "H" "J" as tmp2 %} ' + 
         '{% cycle tmp %} {% cycle tmp2 %} {% cycle tmp %} {% cycle tmp2 %} {%cycle tmp %}',
         'should work with as tag'
-    );
+    ).as('a H b J c H a');
+});
 
-testcase('filter')
-    make_parse_and_execute_test(
-        'this text will be html-escaped &amp; will appear in all lowercase.',
+describe('filter', function () {
+    set_render_context({});
+    it_should_render(
         '{% filter force_escape|lower %}' +
-            'This text will be HTML-escaped & will appear in all lowercase.{% endfilter %}'
+        'This text will be HTML-escaped & will appear in all lowercase.{% endfilter %}'
+    ).as('this text will be html-escaped &amp; will appear in all lowercase.');
+});
+
+
+describe('block and extend', function () {
+
+    set_render_context({ parent: 'block_test_2.html' });
+
+    // write template files
+    write_file('/tmp/block_test_1.html', 'Joel is a slug');
+    write_file('/tmp/block_test_2.html', 'Her er en dejlig {% block test %}hest{% endblock %}.');
+    write_file('/tmp/block_test_3.html',
+        '{% block test1 %}hest{% endblock %}.' 
+        + '{% block test2 %} noget {% endblock %}'
+    );
+    write_file('/tmp/block_test_4.html',
+        '{% extends "block_test_3.html" %}'
+        + '{% block test1 %}{{ block.super }}{% block test3 %}{% endblock %}{% endblock %}'
+        + '{% block test2 %} Et cirkus{{ block.super }}{% endblock %}'
     );
 
-testcase('block and extend')
-    setup(function () {
-        write_file('/tmp/block_test_1.html', 'Joel is a slug');
-        write_file('/tmp/block_test_2.html', 'Her er en dejlig {% block test %}hest{% endblock %}.');
-        write_file('/tmp/block_test_3.html',
-            '{% block test1 %}hest{% endblock %}.' 
-            + '{% block test2 %} noget {% endblock %}'
-        );
-        write_file('/tmp/block_test_4.html',
-            '{% extends "block_test_3.html" %}'
-            + '{% block test1 %}{{ block.super }}{% block test3 %}{% endblock %}{% endblock %}'
-            + '{% block test2 %} Et cirkus{{ block.super }}{% endblock %}'
-        );
+    var template_loader = require('../../lib/template/loader');
+    template_loader.flush();
+    template_loader.set_path('/tmp');
 
-        var template_loader = require('../djangode/template/loader');
-        template_loader.flush();
-        template_loader.set_path('/tmp');
+    //block should parse and evaluate
+    it_should_render(
+        '{% block test %}{% filter lower %}HER ER EN HEST{% endfilter %}Giraf{% endblock %}'
+    ).as('her er en hestGiraf');
 
-        return { obj: { parent: 'block_test_2.html' } };
-    })
+    //extend should parse and evaluate (without blocks)'
+    it_should_render(
+        '{% extends "block_test_1.html" %}'
+    ).as('Joel is a slug');
 
-    make_parse_and_execute_test('her er en hestGiraf',
-        '{% block test %}{% filter lower %}HER ER EN HEST{% endfilter %}Giraf{% endblock %}',
-        'block should parse and evaluate');
+    //block should override block in extend
+    it_should_render(
+        '{% extends "block_test_2.html" %}{% block test %}giraf{% endblock %}'
+    ).as('Her er en dejlig giraf.');
 
-    make_parse_and_execute_test('Joel is a slug',
-        '{% extends "block_test_1.html" %}',
-        'extend should parse and evaluate (without blocks)');
+    //block.super variable should work
+    it_should_render(
+        '{% extends "block_test_2.html" %}{% block test %}{{ block.super }}giraf{% endblock %}'
+    ).as('Her er en dejlig hestgiraf.');
 
-    make_parse_and_execute_test('Her er en dejlig giraf.',
-        '{% extends "block_test_2.html" %}{% block test %}giraf{% endblock %}',
-        'block should override block in extend');
-
-    make_parse_and_execute_test('Her er en dejlig hestgiraf.',
-        '{% extends "block_test_2.html" %}{% block test %}{{ block.super }}giraf{% endblock %}',
-        'block.super variable should work');
-
-    make_parse_and_execute_test('hestgiraf. Et cirkus noget tre',
+    //more than two levels
+    it_should_render(
         '{% extends "block_test_4.html" %}'
         + '{% block test2 %}{{ block.super }}tre{% endblock %}'
-        + '{% block test3 %}giraf{% endblock %}',
-        'more than two levels');
+        + '{% block test3 %}giraf{% endblock %}'
+    ).as('hestgiraf. Et cirkus noget tre');
 
-    make_parse_and_execute_test('Her er en dejlig hestgiraf.',
-        '{% extends parent %}{% block test %}{{ block.super }}giraf{% endblock %}',
-        'extend with variable key');
+    //extend with variable key
+    it_should_render(
+        '{% extends parent %}{% block test %}{{ block.super }}giraf{% endblock %}'
+    ).as('Her er en dejlig hestgiraf.');
 
     // TODO: tests to specify behavior when blocks are name in subview but not parent
+});
 
-testcase('autoescape')
-    setup(function () { return { obj: {test: '<script>'}}; });
-    make_parse_and_execute_test('<script>',
+describe('autoescape', function () {
+    set_render_context({ test: '<script>'});
+
+    it_should_render(
         '{% autoescape off %}{{ test }}{% endautoescape %}',
-        'there should be no escaping in "off" block');
+        'there should be no escaping in "off" block'
+    ).as('<script>');
 
-    make_parse_and_execute_test('&lt;script&gt;',
+    it_should_render(
         '{% autoescape on %}{{ test }}{% endautoescape %}',
-        'there should be escaping in "on" block');
+        'there should be escaping in "on" block'
+    ).as('&lt;script&gt;');
+});
 
-testcase('firstof')
-    setup(function () { return {obj: { var1: 'hest' }}; });
-    make_parse_and_execute_test('hest', '{% firstof var1 var2 var3 %}');
-    make_parse_and_execute_test('hest', '{% firstof var60 var1 var3 %}');
-    make_parse_and_execute_test('', '{% firstof var60 var70 var100 %}');
-    make_parse_and_execute_test('fallback', '{% firstof var60 var70 var100 "fallback" %}');
+describe('firstof', function () {
+    set_render_context({ var1: 'hest' });
 
-testcase('with')
-    test_async('function result should be cached', function (testcontext, complete) {
-        var t = template.parse('{% with test.sub.func as tmp %}{{ tmp }}:{{ tmp }}{% endwith %}');
-        var cnt = 0;
-        var o = { test: { sub: { func: function () { cnt++; return cnt; } } } }
-    
-        t.render(o, function (error, result) {
-            if (error) {
-                fail( error, complete );
-            } else {
-                assertEquals('1:1', result, complete);
-                assertEquals(1, cnt, complete);
-            }
-            end_async_test(complete);
-        })
-    });
+    it_should_render('{% firstof var1 var2 var3 %}').as('hest');
+    it_should_render('{% firstof var60 var1 var3 %}').as('hest');
+    it_should_render('{% firstof var60 var70 var100 %}').as('');
+    it_should_render('{% firstof var60 var70 var100 "fallback" %}').as('fallback');
+});
 
-testcase('ifchanged')
-    setup(function () { return {obj: { list:['hest','giraf','giraf','hestgiraf'] }}; }); 
-    make_parse_and_execute_test('hestgirafhestgiraf',
+
+describe('with', function () {
+    var cnt = 0;
+    set_render_context({ test: { sub: { func: function () { return ++cnt; } } } });
+    it_should_render('{% with test.sub.func as tmp %}{{ tmp }}:{{ tmp }}{% endwith %}').as('1:1');
+});
+
+
+describe('ifchanged', function () {
+    set_render_context({ list:['hest','giraf','giraf','hestgiraf'] });
+    it_should_render(
         '{% for item in list %}{% ifchanged %}{{ item }}{% endifchanged %}{%endfor%}'
-    );
-    make_parse_and_execute_test('hestgiraf::hestgiraf',
+    ).as('hestgirafhestgiraf');
+
+    it_should_render(
         '{% for item in list %}{% ifchanged %}{{ item }}{% else %}::{% endifchanged %}{%endfor%}'
+    ).as('hestgiraf::hestgiraf');
+});
+
+describe('ifequal', function () {
+    set_render_context({item: 'hest', other: 'hest', fish: 'laks'  });
+
+    it_should_render('{% ifequal "hest" "hest" %}giraf{%endifequal %}').as('giraf');
+    it_should_render('{% ifequal item "hest" %}giraf{%endifequal %}').as('giraf');
+    it_should_render('{% ifequal item other %}giraf{%endifequal %}').as('giraf');
+    it_should_render('{% ifequal item fish %}giraf{%endifequal %}').as('');
+    it_should_render('{% ifequal item fish %}giraf{% else %}tapir{%endifequal %}').as('tapir');
+});
+
+describe('ifnotequal', function () {
+    set_render_context({item: 'hest', other: 'hest', fish: 'laks' });
+
+    it_should_render('{% ifnotequal "hest" "giraf" %}laks{%endifnotequal %}').as('laks');
+    it_should_render('{% ifnotequal item "giraf" %}laks{%endifnotequal %}').as('laks');
+    it_should_render('{% ifnotequal item fish %}laks{%endifnotequal %}').as('laks');
+    it_should_render('{% ifnotequal item other %}laks{%endifnotequal %}').as('');
+    it_should_render('{% ifnotequal item other %}laks{% else %}hest{% endifnotequal %}').as('hest');
+});
+
+describe('now', function () {
+    set_render_context({});
+    var date = new Date();
+    var expected = (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':' +
+                    (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes());
+    it_should_render('{% now "H:i" %}').as(expected);
+});
+
+describe('include', function () {
+    write_file('/tmp/include_test.html', 'her er en hest{{ item }}.');
+
+    var template_loader = require('../../lib/template/loader');
+    template_loader.flush();
+    template_loader.set_path('/tmp');
+
+    set_render_context({ name: 'include_test.html', item: 'giraf' });
+
+    it_should_render('{% include "include_test.html" %}').as('her er en hestgiraf.');
+    it_should_render('{% include name %}').as('her er en hestgiraf.');
+});
+
+describe('load', function () {
+    write_file('/tmp/load_tag_test.js',
+       'exports.filters = {' + 
+       '    testfilter: function () {' + 
+       '        return "hestgiraf";' + 
+       '    }' + 
+       '};' + 
+       'exports.tags = {' + 
+       '    testtag: function () {' + 
+       '        return function (context, callback) {' + 
+       '            callback(false, "hestgiraf");' + 
+       '        };' + 
+       '    }' + 
+       '};'
     );
+    require.paths.push('/tmp');
+    it_should_render('{% load load_tag_test %}{{ 100|testfilter }}').as('hestgiraf');
+    it_should_render('{% load "load_tag_test" %}{{ 100|testfilter }}').as('hestgiraf');
+    it_should_render('{% load load_tag_test %}{% testtag %}').as('hestgiraf');
+});
 
-testcase('ifequal')
-    setup(function () { return {obj:{item: 'hest', other: 'hest', fish: 'laks' } }; }); 
+describe('templatetag', function () {
+    set_render_context({});
+    it_should_render('{% templatetag openblock %}').as('{%');
+    it_should_render('{% templatetag closeblock %}').as('%}');
+    it_should_render('{% templatetag openvariable %}').as('{{');
+    it_should_render('{% templatetag closevariable %}').as('}}');
+    it_should_render('{% templatetag openbrace %}').as('{');
+    it_should_render('{% templatetag closebrace %}').as('}');
+    it_should_render('{% templatetag opencomment %}').as('{#');
+    it_should_render('{% templatetag closecomment %}').as('#}');
+});
 
-    make_parse_and_execute_test('giraf', '{% ifequal "hest" "hest" %}giraf{%endifequal %}');
-    make_parse_and_execute_test('giraf', '{% ifequal item "hest" %}giraf{%endifequal %}');
-    make_parse_and_execute_test('giraf', '{% ifequal item other %}giraf{%endifequal %}');
-    make_parse_and_execute_test('',      '{% ifequal item fish %}giraf{%endifequal %}');
-    make_parse_and_execute_test('tapir', '{% ifequal item fish %}giraf{% else %}tapir{%endifequal %}');
+describe('spaceless', function () {
+    set_render_context({});
+    it_should_render(
+        '{% spaceless %}<p>\n        <a href="foo/">Foo</a>\n    </p>{% endspaceless %}'
+    ).as('<p><a href="foo/">Foo</a></p>');
+});
 
-testcase('ifnotequal')
-    setup(function () { return {obj:{item: 'hest', other: 'hest', fish: 'laks' } }; }); 
+describe('widthratio', function () {
+    set_render_context({this_value: 175, max_value: 200 });
+    it_should_render('{% widthratio this_value max_value 100 %}').as('88');
+});
 
-    make_parse_and_execute_test('laks', '{% ifnotequal "hest" "giraf" %}laks{%endifnotequal %}');
-    make_parse_and_execute_test('laks', '{% ifnotequal item "giraf" %}laks{%endifnotequal %}');
-    make_parse_and_execute_test('laks', '{% ifnotequal item fish %}laks{%endifnotequal %}');
-    make_parse_and_execute_test('',     '{% ifnotequal item other %}laks{%endifnotequal %}');
-    make_parse_and_execute_test('hest', '{% ifnotequal item other %}laks{% else %}hest{% endifnotequal %}');
-
-testcase('now')
-    test_async('should work as expected', function (testcontext, complete) {
-        var t = template.parse('{% now "H:i" %}');
-        var date = new Date();
-        var expected = (date.getHours() < 10 ? '0' + date.getHours() : date.getHours()) + ':' +
-                       (date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes());
-
-        t.render({}, function (error, result) {
-            if (error) {
-                fail(error, complete);
-            } else { 
-                assertEquals(expected, result, complete);
-            }
-            end_async_test(complete);
-        });
+describe('regroup', function () {
+    set_render_context({
+        people: [
+            {'first_name': 'George', 'last_name': 'Bush', 'gender': 'Male'},
+            {'first_name': 'Bill', 'last_name': 'Clinton', 'gender': 'Male'},
+            {'first_name': 'Margaret', 'last_name': 'Thatcher', 'gender': 'Female'},
+            {'first_name': 'Condoleezza', 'last_name': 'Rice', 'gender': 'Female'},
+            {'first_name': 'Pat', 'last_name': 'Smith', 'gender': 'Unknown'}
+        ]
     });
 
-testcase('include')
-    setup(function () {
-        write_file('/tmp/include_test.html', 'her er en hest{{ item }}.');
-
-        var template_loader = require('../djangode/template/loader');
-        template_loader.flush();
-        template_loader.set_path('/tmp');
-
-        return { obj: { name: 'include_test.html', item: 'giraf' } };
-    })
-
-    make_parse_and_execute_test('her er en hestgiraf.', '{% include "include_test.html" %}');
-    make_parse_and_execute_test('her er en hestgiraf.', '{% include name %}');
-
-testcase('load')
-    require.paths.push(__dirname)
-    make_parse_and_execute_test('hestgiraf', '{% load load_tag_test %}{{ 100|testfilter }}');
-    make_parse_and_execute_test('hestgiraf', '{% load "load_tag_test" %}{{ 100|testfilter }}');
-    make_parse_and_execute_test('hestgiraf', '{% load load_tag_test %}{% testtag %}');
-
-testcase('templatetag')
-    make_parse_and_execute_test('{%', '{% templatetag openblock %}');
-    make_parse_and_execute_test('%}', '{% templatetag closeblock %}');
-    make_parse_and_execute_test('{{', '{% templatetag openvariable %}');
-    make_parse_and_execute_test('}}', '{% templatetag closevariable %}');
-    make_parse_and_execute_test('{', '{% templatetag openbrace %}');
-    make_parse_and_execute_test('}', '{% templatetag closebrace %}');
-    make_parse_and_execute_test('{#', '{% templatetag opencomment %}');
-    make_parse_and_execute_test('#}', '{% templatetag closecomment %}');
-
-testcase('spaceless')
-    make_parse_and_execute_test('<p><a href="foo/">Foo</a></p>',
-        '{% spaceless %}<p>\n        <a href="foo/">Foo</a>\n    </p>{% endspaceless %}');
-
-testcase('widthratio')
-    setup(function () { return {obj:{this_value: 175, max_value: 200 } }; }); 
-    make_parse_and_execute_test('88', '{% widthratio this_value max_value 100 %}');
-
-testcase('regroup')
-    setup(function () {
-        return {
-            obj: {
-                people: [
-                    {'first_name': 'George', 'last_name': 'Bush', 'gender': 'Male'},
-                    {'first_name': 'Bill', 'last_name': 'Clinton', 'gender': 'Male'},
-                    {'first_name': 'Margaret', 'last_name': 'Thatcher', 'gender': 'Female'},
-                    {'first_name': 'Condoleezza', 'last_name': 'Rice', 'gender': 'Female'},
-                    {'first_name': 'Pat', 'last_name': 'Smith', 'gender': 'Unknown'}
-                ]
-            }
-        };
-    });
-
-    make_parse_and_execute_test('<ul>' +
-        '<li>Male:<ul><li>George Bush</li><li>Bill Clinton</li></ul></li>' +
-        '<li>Female:<ul><li>Margaret Thatcher</li><li>Condoleezza Rice</li></ul></li>' +
-        '<li>Unknown:<ul><li>Pat Smith</li></ul></li></ul>',
+    it_should_render(
         '{% regroup people by gender as gender_list %}' + 
         '<ul>{% for gender in gender_list %}<li>{{ gender.grouper }}:' +
         '<ul>{% for item in gender.list %}<li>{{ item.first_name }} {{ item.last_name }}</li>{% endfor %}' +
-        '</ul></li>{% endfor %}</ul>');
+        '</ul></li>{% endfor %}</ul>'
+    ).as(
+        '<ul>' +
+            '<li>Male:<ul><li>George Bush</li><li>Bill Clinton</li></ul></li>' +
+            '<li>Female:<ul><li>Margaret Thatcher</li><li>Condoleezza Rice</li></ul></li>' +
+            '<li>Unknown:<ul><li>Pat Smith</li></ul></li>' +
+        '</ul>'
+    );
+});
 
-testcase('url')
-    setup(function () {
+describe('url', function () {
+
+    set_render_context({ year: 1981, month: 12, date: 2, url_name: 'news-views-article_detail' });
+
+    beforeEach(function () {
         process.djangode_urls = {
             'news-views-special_case_2003': /^articles\/2003\/$/,
             'news-views-year_archive': /^articles\/(\d{4})\/$/,
             'news-views-month_archive': /^articles\/(\d{4})\/(\d{2})\/$/,
             'news-views-article_detail': /^articles\/(\d{4})\/(\d{2})\/(\d+)\/$/
         };
-        return { obj: { year: 1981, month: 12, date: 2, url_name: 'news-views-article_detail' } };
     });
-    teardown( function () {
+
+    afterEach(function () {
         delete process.djangode_urls;
     });
-    make_parse_and_execute_test("/articles/2003/", "{% url 'news-views-special_case_2003' %}");
-    make_parse_and_execute_test("/articles/1981/", "{% url 'news-views-year_archive' 1981 %}");
-    make_parse_and_execute_test("/articles/1981/12/", "{% url 'news-views-month_archive' 1981 , 12 %}");
-    make_parse_and_execute_test("/articles/1981/12/2/", "{% url url_name year, month, date %}");
 
-    make_parse_and_execute_test("/articles/2003/",
-        "{% url 'news-views-special_case_2003' as the_url %}{{ the_url }}");
-    make_parse_and_execute_test("/articles/1981/12/",
-        "{% url 'news-views-month_archive' 1981, 12 as the_url %}{{ the_url }}");
-run();
+    it_should_render("{% url 'news-views-special_case_2003' %}").as("/articles/2003/");
+    it_should_render("{% url 'news-views-year_archive' 1981 %}").as("/articles/1981/");
+    it_should_render("{% url 'news-views-month_archive' 1981 , 12 %}").as("/articles/1981/12/");
+    it_should_render("{% url url_name year, month, date %}").as("/articles/1981/12/2/");
+
+    it_should_render("{% url 'news-views-special_case_2003' as the_url %}{{ the_url }}").as("/articles/2003/");
+    it_should_render("{% url 'news-views-month_archive' 1981, 12 as the_url %}{{ the_url }}").as("/articles/1981/12/");
+});
+
 

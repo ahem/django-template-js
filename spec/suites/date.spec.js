@@ -1,3 +1,5 @@
+var extend = require('../../lib/utils/base').extend;
+extend(GLOBAL, require('../../lib/utils/date'));
 
 describe('date_format', function () {
     it('should format each filter correctly', function () {
@@ -7,7 +9,7 @@ describe('date_format', function () {
         expect(format_date(d, 'A')).toBe('PM');
         expect(format_date(d, 'b')).toBe('dec');
 
-        expect(format_date(d, 'B')).toThrow();
+        expect(function () { format_date(d, 'B'); }).toThrow();
 
         expect(format_date(d, 'c')).toBe('1981-12-02T18:31:45.123000');
         expect(format_date(d, 'd')).toBe('02');
@@ -20,7 +22,7 @@ describe('date_format', function () {
         expect(format_date(d, 'H')).toBe('18'); // x
         expect(format_date(d, 'i')).toBe('31'); // x
 
-        expect(format_date(d, 'I')).toThrow();
+        expect(function () { format_date(d, 'I'); }).toThrow();
 
         expect(format_date(d, 'l')).toBe('Wednesday');
         expect(format_date(d, 'L')).toBe('false');
@@ -35,7 +37,7 @@ describe('date_format', function () {
         expect(format_date(new Date(2000, 1, 1, 12, 0), 'P')).toBe('noon');
         expect(format_date(new Date(2000, 1, 1, 6, 0), 'P')).toBe('6 a.m.');
 
-        expect('2 Dec 1981 18:31:45 ' + tz, format_date(d, 'r')).toBe('Wed');
+        expect(format_date(d, 'r')).toBe('Wed, 2 Dec 1981 18:31:45 ' + tz);
         expect(format_date(d, 's')).toBe('45'); // x
         expect(format_date(d, 'S')).toBe('nd'); // x (st, nd, rt or th)
 
@@ -89,4 +91,3 @@ describe('timesince', function () {
     });
 });
 
-run();
