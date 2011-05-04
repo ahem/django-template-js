@@ -1,3 +1,6 @@
 [submodule "support/jasmine"]
 	path = support/jasmine
 	url = git://github.com/pivotal/jasmine.git
+[submodule "support/requirejs"]
+	path = support/requirejs
+	url = https://github.com/jrburke/requirejs
